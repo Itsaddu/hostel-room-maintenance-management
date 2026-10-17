@@ -14,7 +14,6 @@ Tabs (sidebar navigation):
 """
 from __future__ import annotations
 
-import sqlite3
 from datetime import date
 
 import pandas as pd
@@ -22,6 +21,7 @@ import streamlit as st
 
 from db_engine import (
     CATEGORIES,
+    DB_ERRORS,
     GENDERS,
     STATUSES,
     HostelDB,
@@ -39,7 +39,15 @@ st.set_page_config(
 # Session state — keep the database + a refresh counter across reruns
 # ------------------------------------------------------------------
 if "db" not in st.session_state:
-    st.session_state.db = get_db(reset=True)
+    try:
+        st.session_state.db = get_db(reset=True)
+    except DB_ERRORS as e:
+        st.error(
+            "Could not connect to the configured database. Check that PostgreSQL is running "
+            "and that the HRMMS_DB_* values in .env are correct. "
+            f"Connection details: {e}"
+        )
+        st.stop()
 if "refresh" not in st.session_state:
     st.session_state.refresh = 0
 
@@ -221,7 +229,7 @@ def page_student() -> None:
                     )
                     bump()
                     st.success("Complaint lodged successfully. Status: Pending.")
-                except sqlite3.Error as e:
+                except DB_ERRORS as e:
                     st.error(f"Failed: {e}")
 
     st.divider()
@@ -300,7 +308,7 @@ def page_admin() -> None:
     st.markdown("##### Assign Technician")
     avail_staff = db().fetch_all(
         "SELECT Staff_ID, Staff_Name, Specialization FROM MAINTENANCE_STAFF "
-        "WHERE Is_Available=1 ORDER BY Specialization, Staff_Name"
+        "WHERE Is_Available=TRUE ORDER BY Specialization, Staff_Name"
     )
     staff_options = {f"{s['Staff_Name']} — {s['Specialization']} (ID {s['Staff_ID']})": s["Staff_ID"]
                      for s in avail_staff}
@@ -326,7 +334,7 @@ def page_admin() -> None:
                 bump()
                 st.success("Staff assigned.")
                 st.rerun()
-            except sqlite3.Error as e:
+            except DB_ERRORS as e:
                 st.error(f"Engine blocked assignment: {e}")
 
     # ---- Status transitions ----
@@ -381,7 +389,7 @@ def page_rooms() -> None:
                 bump()
                 st.success("Student allocated.")
                 st.rerun()
-            except sqlite3.Error as e:
+            except DB_ERRORS as e:
                 st.error(f"Allocation blocked: {e}")
         if bcol2.button("Vacate (set room to NULL)"):
             db().execute(
@@ -475,6 +483,7 @@ def page_staff() -> None:
         return
 
     df = pd.DataFrame([dict(r) for r in rows])
+    df["Is_Available"] = df["Is_Available"].astype(bool)
 
     # Summary KPIs
     sk1, sk2, sk3 = st.columns(3)
@@ -506,7 +515,7 @@ def page_staff() -> None:
             if new_avail != avail:
                 db().execute(
                     "UPDATE MAINTENANCE_STAFF SET Is_Available=? WHERE Staff_ID=?",
-                    (1 if new_avail else 0, r["Staff_ID"]),
+                    (bool(new_avail), r["Staff_ID"]),
                 )
                 bump()
                 st.rerun()

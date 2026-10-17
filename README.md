@@ -2,7 +2,7 @@
 
 A full-stack, submission-ready DBMS project that manages **hostel room allocations** and **maintenance complaints** with automated business rules enforced at the database layer.
 
-The project ships with **two front-ends** (Streamlit web UI and a Tkinter desktop GUI) backed by a **simulated PostgreSQL engine** running on SQLite (so it runs out-of-the-box with no database server setup). The exact same schema, triggers, and constraints are also provided as a production-grade `schema.sql` for PostgreSQL.
+The project ships with **two front-ends** (Streamlit web UI and a Tkinter desktop GUI). Streamlit can use SQLite by default or connect to PostgreSQL; Tkinter continues to use SQLite. The reference `schema.sql` contains PostgreSQL DDL and triggers.
 
 ---
 
@@ -58,8 +58,8 @@ The project ships with **two front-ends** (Streamlit web UI and a Tkinter deskto
 |-------|-----------|
 | Frontend (Web) | Streamlit 1.65+, Pandas |
 | Frontend (Desktop) | Tkinter (stdlib) |
-| Database Engine | SQLite (stdlib) — emulating PostgreSQL |
-| Production Schema | PostgreSQL (plpgsql triggers) |
+| Database Engine | SQLite (default) or PostgreSQL (Streamlit) |
+| PostgreSQL Adapter | Psycopg 3 |
 | Language | Python 3.10+ |
 
 ---
@@ -69,7 +69,7 @@ The project ships with **two front-ends** (Streamlit web UI and a Tkinter deskto
 ```
 Project_1/
 ├── schema.sql          # PostgreSQL DDL + triggers + seed data + analytical queries
-├── db_engine.py        # Simulated PostgreSQL engine (SQLite) + triggers + execution log
+├── db_engine.py        # SQLite/PostgreSQL database layer + triggers + execution log
 ├── app.py              # Streamlit web UI (5 tabs)
 ├── tkinter_app.py      # Tkinter desktop GUI (3 tabs)
 ├── requirements.txt    # Python dependencies
@@ -94,9 +94,20 @@ source .venv/bin/activate
 python3 -m pip install -r requirements.txt
 ```
 
-This installs `streamlit` and `pandas`. No database server is required — `sqlite3` ships with Python.
+This installs `streamlit`, `pandas`, and the PostgreSQL adapter. SQLite is included with Python.
 
-### 3. (Optional) PostgreSQL Setup
+### 3. Connect the Streamlit app to PostgreSQL (optional)
+
+The Streamlit app uses SQLite by default. To use PostgreSQL, copy `.env.example` to `.env` and set the connection values. Put your PostgreSQL password in `.env` locally; `.env` is excluded from Git.
+
+```bash
+cp .env.example .env
+nano .env
+```
+
+Set `HRMMS_DB_BACKEND=postgres`, then fill in `HRMMS_DB_HOST`, `HRMMS_DB_PORT`, `HRMMS_DB_NAME`, `HRMMS_DB_USER`, and `HRMMS_DB_PASSWORD`. The app creates its tables and triggers in a separate `hrmms` schema and seeds demo data when rows are absent. It does not run the destructive `DROP TABLE` statements in `schema.sql` against your `public` schema. The Tkinter desktop app continues to use its own SQLite database.
+
+### 4. (Optional) PostgreSQL Setup
 
 If you want to run the production schema against a real PostgreSQL server:
 
@@ -117,7 +128,7 @@ Run commands from this directory. The database files are stored alongside the ap
 ### Streamlit Web App (Recommended — 5 full tabs)
 
 ```bash
-python3 -m streamlit run app.py
+./run_linux.sh
 ```
 
 Opens at **http://localhost:8501**

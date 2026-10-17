@@ -3,6 +3,13 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
+
+if [[ -f "$SCRIPT_DIR/.env" ]]; then
+  set -a
+  source "$SCRIPT_DIR/.env"
+  set +a
+fi
+
 VENV_DIR="$SCRIPT_DIR/.venv"
 VENV_PYTHON="$VENV_DIR/bin/python"
 
@@ -18,7 +25,7 @@ fi
 
 REQUIREMENTS_HASH="$(sha256sum requirements.txt | cut -d ' ' -f 1)"
 HASH_FILE="$VENV_DIR/.requirements.sha256"
-if [[ ! -f "$HASH_FILE" ]] || [[ "$(cat "$HASH_FILE")" != "$REQUIREMENTS_HASH" ]] || ! "$VENV_PYTHON" -c 'import streamlit, pandas' >/dev/null 2>&1; then
+if [[ ! -f "$HASH_FILE" ]] || [[ "$(cat "$HASH_FILE")" != "$REQUIREMENTS_HASH" ]] || ! "$VENV_PYTHON" -c 'import streamlit, pandas, psycopg' >/dev/null 2>&1; then
   PIP_DISABLE_PIP_VERSION_CHECK=1 "$VENV_PYTHON" -m pip install -r requirements.txt
   printf '%s\n' "$REQUIREMENTS_HASH" > "$HASH_FILE"
 fi
