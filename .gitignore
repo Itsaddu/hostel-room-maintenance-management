@@ -1,0 +1,22 @@
+# Python virtual environments and caches
+.venv/
+__pycache__/
+*.py[cod]
+
+# Local SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Local secrets and editor settings
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+.vscode/
+.idea/
+
+# Codex and machine-local metadata
+.agents/
+.aws/
+.codex/
