@@ -436,7 +436,10 @@ def _postgres_row(row: dict[str, Any] | None) -> PostgresRow | None:
         return None
     values = {}
     for key, value in row.items():
-        display_key = "ID" if key.casefold() == "id" else "_".join(part.capitalize() for part in key.split("_"))
+        display_key = "_".join(
+            "ID" if part.casefold() == "id" else part.capitalize()
+            for part in key.split("_")
+        )
         values[display_key] = value
     return PostgresRow(values)
 
