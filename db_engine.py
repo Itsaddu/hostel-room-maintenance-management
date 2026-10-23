@@ -21,6 +21,8 @@ This module is importable by both the Streamlit app and any test script.
 from __future__ import annotations
 
 import os
+import hashlib
+import secrets
 import sqlite3
 from datetime import date, datetime
 from typing import Any
@@ -486,17 +488,104 @@ class HostelDB:
                 cur.execute("CREATE SCHEMA IF NOT EXISTS hrmms")
                 cur.execute("SET search_path TO hrmms, public")
                 cur.execute(POSTGRES_SCHEMA_SQL, prepare=False)
-                conn.commit()
-                return
-
-            # check if schema already exists
-            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='ROOM'")
-            if not cur.fetchone():
-                cur.executescript(SCHEMA_SQL)
-                cur.executescript(SEED_SQL)
-                conn.commit()
+                cur.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS LOGIN_USER (
+                        Username VARCHAR(60) PRIMARY KEY,
+                        Password_Salt VARCHAR(32) NOT NULL,
+                        Password_Hash VARCHAR(64) NOT NULL,
+                        Role VARCHAR(10) NOT NULL CHECK (Role IN ('Student','Warden','Admin')),
+                        Student_Roll_No VARCHAR(20) UNIQUE,
+                        FOREIGN KEY (Student_Roll_No) REFERENCES STUDENT(Roll_No) ON DELETE CASCADE
+                    )
+                    """
+                )
+                cur.execute(
+                    "UPDATE STUDENT SET Name = %s WHERE Roll_No = %s",
+                    ("Adwaith", "AM.EN.U4CSE23001"),
+                )
+            else:
+                # Create the seeded demo schema only when the database is empty.
+                cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='ROOM'")
+                if not cur.fetchone():
+                    cur.executescript(SCHEMA_SQL)
+                    cur.executescript(SEED_SQL)
+                cur.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS LOGIN_USER (
+                        Username TEXT PRIMARY KEY,
+                        Password_Salt TEXT NOT NULL,
+                        Password_Hash TEXT NOT NULL,
+                        Role TEXT NOT NULL CHECK (Role IN ('Student','Warden','Admin')),
+                        Student_Roll_No TEXT UNIQUE,
+                        FOREIGN KEY (Student_Roll_No) REFERENCES STUDENT(Roll_No) ON DELETE CASCADE
+                    )
+                    """
+                )
+                cur.execute(
+                    "UPDATE STUDENT SET Name = ? WHERE Roll_No = ?",
+                    ("Adwaith", "AM.EN.U4CSE23001"),
+                )
+            conn.commit()
         finally:
             conn.close()
+        self._seed_login_users()
+
+    @staticmethod
+    def _password_hash(password: str, salt_hex: str) -> str:
+        return hashlib.pbkdf2_hmac(
+            "sha256", password.encode("utf-8"), bytes.fromhex(salt_hex), 310_000
+        ).hex()
+
+    def _seed_login_users(self) -> None:
+        """Create missing default and student logins without overwriting passwords."""
+        defaults = (("admin@123", "Admin", None), ("Warden001", "Warden", None))
+        students = self.fetch_all("SELECT Roll_No FROM STUDENT ORDER BY Roll_No")
+        accounts = [*defaults, *((row["Roll_No"], "Student", row["Roll_No"]) for row in students)]
+        known_usernames = {
+            row["Username"] for row in self.fetch_all("SELECT Username FROM LOGIN_USER")
+        }
+        inserts = []
+        for username, role, roll_no in accounts:
+            if username in known_usernames:
+                continue
+            salt = secrets.token_hex(16)
+            inserts.append(
+                (username, salt, self._password_hash(username, salt), role, roll_no)
+            )
+            known_usernames.add(username)
+        if not inserts:
+            return
+
+        sql = (
+            "INSERT INTO LOGIN_USER (Username, Password_Salt, Password_Hash, Role, Student_Roll_No) "
+            "VALUES (?, ?, ?, ?, ?) ON CONFLICT (Username) DO NOTHING"
+        )
+        conn = self._connect()
+        try:
+            cur = conn.cursor()
+            cur.executemany(self._parameter_sql(sql) if self.backend == "postgres" else sql, inserts)
+            conn.commit()
+        finally:
+            conn.close()
+
+    def authenticate(self, username: str, password: str) -> dict[str, str | None] | None:
+        """Return the authenticated user's role and student scope, if valid."""
+        account = self.fetch_one(
+            "SELECT Username, Password_Salt, Password_Hash, Role, Student_Roll_No "
+            "FROM LOGIN_USER WHERE Username = ?",
+            (username.strip(),),
+        )
+        if not account:
+            return None
+        candidate = self._password_hash(password, account["Password_Salt"])
+        if not secrets.compare_digest(candidate, account["Password_Hash"]):
+            return None
+        return {
+            "username": account["Username"],
+            "role": account["Role"],
+            "student_roll_no": account["Student_Roll_No"],
+        }
 
     # ---- execution log ----
     def log(self, sql: str, ok: bool, rows_affected: int = 0,

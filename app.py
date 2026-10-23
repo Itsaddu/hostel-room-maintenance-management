@@ -7,10 +7,10 @@ Run:  streamlit run app.py
 
 Tabs (sidebar navigation):
   1. Student Portal
-  2. Warden / Admin Dashboard
+  2. Warden Dashboard
   3. Room Occupancy & Allocations
   4. Maintenance Staff Analytics & Workload
-  5. PostgreSQL Console & Schema Explorer
+  5. SQL Console & Schema Explorer
 """
 from __future__ import annotations
 
@@ -30,7 +30,6 @@ from db_engine import (
 
 st.set_page_config(
     page_title="HRMMS — Hostel Room & Maintenance Management",
-    page_icon="🏠",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -40,7 +39,7 @@ st.set_page_config(
 # ------------------------------------------------------------------
 if "db" not in st.session_state:
     try:
-        st.session_state.db = get_db(reset=True)
+        st.session_state.db = get_db(reset=False)
     except DB_ERRORS as e:
         st.error(
             "Could not connect to the configured database. Check that PostgreSQL is running "
@@ -64,17 +63,17 @@ def bump() -> None:
 # Styling helpers (status badges, occupancy bars)
 # ------------------------------------------------------------------
 STATUS_COLOR = {
-    "Pending": "#f59e0b",
-    "In Progress": "#3b82f6",
-    "Resolved": "#10b981",
-    "Reopened": "#ef4444",
+    "Pending": "#FF2D95",
+    "In Progress": "#007BA7",
+    "Resolved": "#59636e",
+    "Reopened": "#FF2D95",
 }
 SPEC_COLOR = {
-    "Electrical": "#fbbf24",
-    "Plumbing": "#60a5fa",
-    "Carpentry": "#a78bfa",
-    "Cleaning": "#34d399",
-    "Network": "#f472b6",
+    "Electrical": "#007BA7",
+    "Plumbing": "#FF2D95",
+    "Carpentry": "#007BA7",
+    "Cleaning": "#FF2D95",
+    "Network": "#007BA7",
 }
 
 
@@ -96,55 +95,161 @@ def spec_badge(spec: str) -> str:
 st.markdown(
     """
     <style>
-    .block-card {
-        border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:12px;
-        background:#f8fafc;
+    :root {
+      color-scheme: dark;
+      --canvas: #0A0A0A;
+      --accent: #007BA7;
+      --highlight: #FF2D95;
+      --text: #F4F6F8;
+      --muted: #9AA3AD;
+      --line: rgba(255,255,255,.10);
+      --surface: rgba(255,255,255,.045);
     }
+    html, body, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
+      background: var(--canvas); color: var(--text);
+    }
+    [data-testid="stAppViewContainer"] {
+      background-image: linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+      background-size: 38px 38px;
+    }
+    [data-testid="stHeader"] { background: rgba(10,10,10,.84); }
+    [data-testid="stMainBlockContainer"] { max-width: 1500px; padding-top: 2.2rem; }
+    [data-testid="stSidebar"] {
+      background: #0A0A0A; border-right: 1px solid var(--line);
+    }
+    [data-testid="stSidebar"] > div:first-child { padding-top: 1.4rem; }
+    h1, h2, h3, h4, p, label, [data-testid="stMetricLabel"] { color: var(--text); }
+    [data-testid="stCaptionContainer"], [data-testid="stMarkdownContainer"] p { color: var(--muted); }
+    [data-testid="stMetric"] {
+      background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+      padding: 17px 19px; min-height: 98px;
+    }
+    [data-testid="stMetricValue"] { color: var(--text); font-weight: 650; }
+    [data-testid="stMetricDelta"] { color: var(--accent); }
+    [data-testid="stTextInput"] input, [data-testid="stTextArea"] textarea,
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+      background: rgba(255,255,255,.045); color: var(--text);
+      border: 1px solid var(--line); border-radius: 8px;
+    }
+    [data-testid="stTextInput"] input:focus, [data-testid="stTextArea"] textarea:focus {
+      border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent);
+    }
+    [data-testid="stButton"] button, [data-testid="stFormSubmitButton"] button {
+      border: 1px solid var(--line); border-radius: 8px; color: var(--text);
+      background: rgba(255,255,255,.055); transition: all .18s ease;
+    }
+    [data-testid="stButton"] button:hover, [data-testid="stFormSubmitButton"] button:hover {
+      border-color: var(--accent); color: #fff; transform: translateY(-1px);
+    }
+    [data-testid="stButton"] button[kind="primary"],
+    [data-testid="stFormSubmitButton"] button[kind="primary"],
+    [data-testid="stBaseButton-primary"] {
+      background: var(--accent); border-color: var(--accent); color: white;
+    }
+    input[type="radio"], input[type="checkbox"] { accent-color: var(--accent); }
+    [data-testid="stForm"] {
+      background: rgba(255,255,255,.045); border: 1px solid var(--line);
+      border-radius: 18px; padding: 1.35rem 1.45rem;
+    }
+    [data-testid="stExpander"], [data-testid="stTabs"] [role="tabpanel"] {
+      background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    }
+    [data-testid="stDataFrame"], [data-testid="stTable"] {
+      border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+    }
+    hr { border-color: var(--line); }
+    .brand-mark { color: var(--text); font-size: 1.32rem; font-weight: 760; letter-spacing: .06em; }
+    .eyebrow { color: var(--accent); font-size: .72rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
+    .login-hero { padding: 4.4rem 1.5rem 1.8rem; max-width: 620px; }
+    .login-hero h1 { font-size: clamp(2.6rem, 6vw, 4.5rem); line-height: 1.04; letter-spacing: -.055em; margin: .8rem 0 1.2rem; }
+    .login-hero p { color: var(--muted); font-size: 1.05rem; max-width: 500px; line-height: 1.7; }
+    .login-card-title { color: var(--text); font-size: 1.5rem; font-weight: 650; letter-spacing: -.02em; margin: 0 0 .35rem; }
+    .login-card-copy { color: var(--muted); margin-bottom: 1.35rem; }
     .room-card {
-        border:1px solid #cbd5e1;border-radius:10px;padding:10px;margin:4px;
-        background:#fff;text-align:center;min-height:80px;
+      border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin: 4px;
+      background: rgba(255,255,255,.045); color: var(--text); text-align: left; min-height: 96px;
     }
-    .room-full { background:#fee2e2; border-color:#fca5a5; }
-    .room-vacant { background:#dcfce7; border-color:#86efac; }
-    .room-partial { background:#fef9c3; border-color:#fde047; }
-    .metric-label { font-size:0.8rem;color:#64748b; }
+    .room-full { border-color: rgba(255,45,149,.60); }
+    .room-vacant { border-color: rgba(0,123,167,.7); }
+    .room-partial { border-color: var(--line); }
+    .metric-label { font-size:.8rem;color:var(--muted); }
+    div[role="radiogroup"] label { color: var(--muted); }
+    div[role="radiogroup"] label:has(input:checked) { color: var(--text); }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
 # ------------------------------------------------------------------
+# Unified sign-in. User roles and student identity are verified by the DB.
+# ------------------------------------------------------------------
+if not st.session_state.get("auth_user"):
+    left, right = st.columns([1.25, 1], gap="large")
+    with left:
+        st.markdown(
+            '<div class="login-hero"><div class="eyebrow">Hostel operations</div>'
+            '<h1>Everything in its right place.</h1>'
+            '<p>One secure workspace for student requests, room operations, and maintenance response.</p>'
+            '<div style="margin-top:2.2rem;color:#9AA3AD;font-size:.85rem;letter-spacing:.04em">'
+            'ROOMS &nbsp; / &nbsp; PEOPLE &nbsp; / &nbsp; SERVICE</div></div>',
+            unsafe_allow_html=True,
+        )
+    with right:
+        st.markdown(
+            '<div style="padding:1.5rem .5rem .8rem"><div class="eyebrow">Welcome back</div>'
+            '<div class="login-card-title">Sign in to your workspace</div>'
+            '<div class="login-card-copy">Use the credentials provided for your role.</div></div>',
+            unsafe_allow_html=True,
+        )
+        with st.form("login_form"):
+            login_username = st.text_input("Username")
+            login_password = st.text_input("Password", type="password")
+            login_submitted = st.form_submit_button("Sign in", type="primary", use_container_width=True)
+        if login_submitted:
+            account = db().authenticate(login_username, login_password)
+            if account:
+                st.session_state.auth_user = account
+                st.rerun()
+            st.error("The username or password is incorrect.")
+        st.caption("Access is managed by your hostel administrator.")
+    st.stop()
+
+# ------------------------------------------------------------------
 # Sidebar: navigation + KPI summary
 # ------------------------------------------------------------------
+ROLE_PAGES = {
+    "Student": ["Student Portal"],
+    "Warden": ["Warden Dashboard"],
+    "Admin": ["Warden Dashboard", "Room Occupancy & Allocations", "Staff Analytics & Workload", "PostgreSQL Console"],
+}
+auth_user = st.session_state.auth_user
+role = auth_user["role"]
+allowed_pages = ROLE_PAGES.get(role, [])
+
 with st.sidebar:
-    st.title("🏠 HRMMS")
-    st.caption("Hostel Room & Maintenance Management System")
+    st.markdown('<div class="brand-mark">HRMMS</div>', unsafe_allow_html=True)
+    st.caption("Hostel operations")
+    st.markdown(f'<div class="eyebrow" style="margin-top:1.2rem">{role} access</div>', unsafe_allow_html=True)
     page = st.radio(
-        "Navigation",
-        [
-            "📋 Student Portal",
-            "🛠️ Warden / Admin Dashboard",
-            "🛏️ Room Occupancy & Allocations",
-            "👷 Staff Analytics & Workload",
-            "🗄️ PostgreSQL Console",
-        ],
+        "Workspace",
+        allowed_pages,
         index=0,
+        label_visibility="collapsed",
+        key=f"workspace_page_{role}",
     )
 
+    if role != "Student":
+        st.divider()
+        metrics = db().metrics()
+        st.subheader("Live overview")
+        st.metric("Occupancy", f"{metrics['occupancy_pct']}%", f"{metrics['occupied']}/{metrics['total_beds']} beds")
+        st.metric("Open complaints", metrics["pending"])
+        st.metric("Available staff", metrics["available_staff"])
     st.divider()
-    m = db().metrics()
-    st.subheader("Live KPIs")
-    col1, col2 = st.columns(2)
-    col1.metric("Occupancy", f"{m['occupancy_pct']}%", f"{m['occupied']}/{m['total_beds']} beds")
-    col2.metric("Students", m["students"])
-    col1.metric("Staff", m["staff"], f"{m['available_staff']} avail")
-    col2.metric("Complaints", m["complaints"], f"{m['pending']} pending")
-
-    st.divider()
-    if st.button("🔄 Reset Database to Seed", use_container_width=True):
-        st.session_state.db = get_db(reset=True)
-        bump()
-        st.success("Database reset to seed data.")
+    st.caption(auth_user["username"])
+    if st.button("Sign out", use_container_width=True):
+        st.session_state.pop("auth_user", None)
         st.rerun()
 
 # ==================================================================
@@ -184,12 +289,12 @@ def complaints_df(filters: dict | None = None) -> pd.DataFrame:
 # PAGE 1 : STUDENT PORTAL
 # ==================================================================
 def page_student() -> None:
-    st.header("📋 Student Portal")
-    st.caption("Look up your profile, lodge a maintenance complaint, and track status.")
+    st.header("Student Portal")
+    st.caption("Your profile, maintenance requests, and service updates.")
 
-    roll = st.text_input("Enter your Roll Number", value="AM.EN.U4CSE23001", key="stu_roll")
+    roll = auth_user.get("student_roll_no") if role == "Student" else None
     if not roll:
-        st.info("Enter a roll number to continue.")
+        st.error("This account is not linked to a student record.")
         return
 
     student = db().fetch_one(
@@ -249,7 +354,7 @@ def page_student() -> None:
 # PAGE 2 : WARDEN / ADMIN DASHBOARD
 # ==================================================================
 def page_admin() -> None:
-    st.header("🛠️ Warden / Admin Dashboard")
+    st.header("Warden Dashboard")
     st.caption("Triage complaints, verify specialization match, and transition statuses.")
 
     m = db().metrics()
@@ -320,9 +425,9 @@ def page_admin() -> None:
                             if db().fetch_one("SELECT Specialization FROM MAINTENANCE_STAFF WHERE Staff_ID=?", (v,))["Specialization"] == c["Issue_Category"]),
                            None)
         if match_label:
-            st.success(f"✅ Specialization match available: {match_label}")
+            st.success(f"Specialization match available: {match_label}")
         else:
-            st.warning(f"⚠️ No staff specialized in {c['Issue_Category']} — assignment will be blocked by the engine.")
+            st.warning(f"No staff specialized in {c['Issue_Category']} — assignment will be blocked by the engine.")
 
         chosen = st.selectbox("Select staff member", list(staff_options.keys()), key="assign_staff")
         if st.button("Assign & Set In Progress", type="primary"):
@@ -340,13 +445,13 @@ def page_admin() -> None:
     # ---- Status transitions ----
     st.markdown("##### Status Transitions")
     tcol1, tcol2, tcol3 = st.columns(3)
-    if tcol1.button("⏳ In Progress"):
+    if tcol1.button("In Progress"):
         db().execute("UPDATE COMPLAINT SET Resolution_Status='In Progress' WHERE Complaint_ID=?", (selected_id,))
         bump(); st.rerun()
-    if tcol2.button("✅ Resolve"):
+    if tcol2.button("Resolve"):
         db().execute("UPDATE COMPLAINT SET Resolution_Status='Resolved' WHERE Complaint_ID=?", (selected_id,))
         bump(); st.rerun()
-    if tcol3.button("🔁 Reopen"):
+    if tcol3.button("Reopen"):
         db().execute("UPDATE COMPLAINT SET Resolution_Status='Reopened' WHERE Complaint_ID=?", (selected_id,))
         bump(); st.rerun()
 
@@ -355,7 +460,7 @@ def page_admin() -> None:
 # PAGE 3 : ROOM OCCUPANCY & ALLOCATIONS
 # ==================================================================
 def page_rooms() -> None:
-    st.header("🛏️ Room Occupancy & Allocations")
+    st.header("Room Occupancy & Allocations")
     st.caption("Floor-by-floor block grid, live occupancy, and allocate/vacate actions.")
 
     m = db().metrics()
@@ -368,7 +473,7 @@ def page_rooms() -> None:
     st.divider()
 
     # ---- Allocate / Vacate controls ----
-    with st.expander("➕ Allocate / Vacate Student", expanded=False):
+    with st.expander("Allocate / Vacate Student", expanded=False):
         students = db().fetch_all("SELECT Roll_No, Name FROM STUDENT ORDER BY Roll_No")
         student_map = {f"{s['Roll_No']} — {s['Name']}": s["Roll_No"] for s in students}
         rooms = db().fetch_all("SELECT Room_No, Block, Capacity, Current_Occupancy, Gender_Policy FROM ROOM ORDER BY Block, Room_No")
@@ -408,7 +513,7 @@ def page_rooms() -> None:
         with st.container():
             st.markdown(
                 f"### Block {blk['Block']} "
-                f"{badge(blk['Gender_Policy'], '#6366f1' if blk['Gender_Policy']=='Coed' else '#0ea5e9')}",
+                f"{badge(blk['Gender_Policy'], '#FF2D95' if blk['Gender_Policy']=='Coed' else '#007BA7')}",
                 unsafe_allow_html=True,
             )
             rooms = db().fetch_all(
@@ -434,12 +539,12 @@ def page_rooms() -> None:
                         st.markdown(
                             f'<div class="room-card {cls}">'
                             f'<div style="font-weight:700;font-size:1.1rem;">{r["Room_No"]}</div>'
-                            f'<div style="font-size:0.8rem;color:#475569;">{occ}/{cap} beds</div>'
-                            f'<div style="height:6px;background:#e2e8f0;border-radius:3px;margin:6px 0;">'
+                            f'<div style="font-size:0.8rem;color:#9AA3AD;">{occ}/{cap} beds</div>'
+                            f'<div style="height:6px;background:rgba(255,255,255,.12);border-radius:3px;margin:6px 0;">'
                             f'<div style="height:100%;width:{pct}%;background:'
-                            f'{"#10b981" if pct<70 else "#f59e0b" if pct<100 else "#ef4444"};'
+                            f'{"#007BA7" if pct<70 else "#FF2D95" if pct<100 else "#FF2D95"};'
                             f'border-radius:3px;"></div></div>'
-                            f'<div>{badge(f"{avail} free", "#10b981" if avail else "#ef4444")}</div>'
+                            f'<div>{badge(f"{avail} free", "#007BA7" if avail else "#FF2D95")}</div>'
                             f"</div>",
                             unsafe_allow_html=True,
                         )
@@ -448,7 +553,7 @@ def page_rooms() -> None:
     st.divider()
 
     # ---- Full room table (expandable) ----
-    with st.expander("📊 Full Room Table (CSV-friendly)"):
+    with st.expander("Full Room Table"):
         rows = db().fetch_all(
             "SELECT Block, Room_No, Floor, Capacity, Current_Occupancy AS Occupied, "
             "(Capacity - Current_Occupancy) AS Available, Gender_Policy "
@@ -462,7 +567,7 @@ def page_rooms() -> None:
 # PAGE 4 : STAFF ANALYTICS & WORKLOAD
 # ==================================================================
 def page_staff() -> None:
-    st.header("👷 Maintenance Staff Analytics & Workload")
+    st.header("Maintenance Staff Analytics & Workload")
     st.caption("Technician profiles, task counts, availability, and specialization badges.")
 
     rows = db().fetch_all(
@@ -505,7 +610,7 @@ def page_staff() -> None:
             cc3.metric("Active", int(r["Active_Tasks"]))
             cc4.metric("Resolved", int(r["Resolved_Tasks"]))
             avail = bool(r["Is_Available"])
-            cc5.markdown(badge("Available" if avail else "Busy", "#10b981" if avail else "#ef4444"),
+            cc5.markdown(badge("Available" if avail else "Busy", "#007BA7" if avail else "#FF2D95"),
                          unsafe_allow_html=True)
 
             # availability toggle
@@ -569,7 +674,7 @@ PRESETS = {
 
 
 def page_console() -> None:
-    st.header("🗄️ PostgreSQL Console & Schema Explorer")
+    st.header("SQL Console & Schema Explorer")
     st.caption("Interactive SQL terminal, DDL schema viewer, and constraint verification log.")
 
     tab_sql, tab_schema, tab_log = st.tabs(["SQL Terminal", "DDL Schema", "Constraint Log"])
@@ -588,16 +693,16 @@ def page_console() -> None:
         )
 
         c_run, c_clear = st.columns([1, 5])
-        if c_run.button("▶ Run Query", type="primary"):
+        if c_run.button("Run Query", type="primary"):
             cols, rows, affected, err = db().run_query(sql)
             if err:
-                st.error(f"❌ {err}")
+                st.error(err)
             else:
                 if cols:
-                    st.success(f"✅ {len(rows)} row(s) returned.")
+                    st.success(f"{len(rows)} row(s) returned.")
                     st.dataframe(pd.DataFrame(rows, columns=cols), use_container_width=True, hide_index=True)
                 else:
-                    st.success(f"✅ Query executed. {affected} row(s) affected.")
+                    st.success(f"Query executed. {affected} row(s) affected.")
 
         # ---- Constraint verification run ----
         st.divider()
@@ -638,16 +743,16 @@ def page_console() -> None:
 
             passed = sum(1 for _, ok, _ in checks if ok)
             st.success(f"**{passed}/{len(checks)}** constraints verified.")
-            log_rows = [{"Check": c, "Result": "✅ PASS" if ok else "❌ FAIL", "Detail": d}
+            log_rows = [{"Check": c, "Result": "PASS" if ok else "FAIL", "Detail": d}
                         for c, ok, d in checks]
             st.dataframe(pd.DataFrame(log_rows), use_container_width=True, hide_index=True)
 
     # ---- DDL Schema ----
     with tab_schema:
-        st.subheader("DDL Schema (PostgreSQL)")
+        st.subheader("Project Schema Reference")
         st.code(open_schema_sql(), language="sql")
 
-        st.subheader("Live SQLite Schema (engine)")
+        st.subheader(f"Live {db().backend.capitalize()} Schema")
         engine_sql = _engine_schema_sql()
         st.code(engine_sql, language="sql")
 
@@ -660,7 +765,7 @@ def page_console() -> None:
         else:
             df = pd.DataFrame(log)
             df["status"] = df["status"].apply(
-                lambda s: badge("OK", "#10b981") if s == "OK" else badge("ERROR", "#ef4444")
+                lambda s: badge("OK", "#007BA7") if s == "OK" else badge("ERROR", "#FF2D95")
             )
             st.markdown(df.to_html(escape=False, index=False), unsafe_allow_html=True)
 
@@ -674,21 +779,87 @@ def open_schema_sql() -> str:
 
 
 def _engine_schema_sql() -> str:
-    rows = db().fetch_all(
-        "SELECT sql FROM sqlite_master WHERE type IN ('table','trigger','index') AND sql IS NOT NULL ORDER BY type, name"
+    if db().backend == "sqlite":
+        rows = db().fetch_all(
+            "SELECT sql FROM sqlite_master WHERE type IN ('table','trigger','index') "
+            "AND sql IS NOT NULL ORDER BY type, name"
+        )
+        return "\n\n".join(r["sql"] for r in rows) + ";"
+
+    columns = db().fetch_all(
+        """
+        SELECT table_name, column_name, data_type, character_maximum_length,
+               numeric_precision, numeric_scale, is_nullable, column_default
+        FROM information_schema.columns
+        WHERE table_schema = 'hrmms'
+        ORDER BY table_name, ordinal_position
+        """
     )
-    return "\n\n".join(r["sql"] for r in rows) + ";"
+    constraints = db().fetch_all(
+        """
+        SELECT t.relname AS table_name, c.conname,
+               pg_get_constraintdef(c.oid, true) AS definition
+        FROM pg_constraint c
+        JOIN pg_class t ON t.oid = c.conrelid
+        JOIN pg_namespace n ON n.oid = t.relnamespace
+        WHERE n.nspname = 'hrmms'
+        ORDER BY table_name, conname
+        """
+    )
+    tables: dict[str, list[str]] = {}
+    for column in columns:
+        data_type = column["data_type"]
+        char_size = column["character_maximum_length"]
+        precision = column["numeric_precision"]
+        scale = column["numeric_scale"]
+        if char_size:
+            data_type = f"{data_type}({char_size})"
+        elif precision:
+            data_type = f"{data_type}({precision},{scale})" if scale else f"{data_type}({precision})"
+        nullable = "" if column["is_nullable"] == "YES" else " NOT NULL"
+        default = f" DEFAULT {column['column_default']}" if column["column_default"] else ""
+        tables.setdefault(column["table_name"], []).append(
+            f'    "{column["column_name"]}" {data_type}{default}{nullable}'
+        )
+    for constraint in constraints:
+        tables.setdefault(constraint["table_name"], []).append(
+            f'    CONSTRAINT "{constraint["conname"]}" {constraint["definition"]}'
+        )
+
+    ddl = [
+        f'CREATE TABLE "hrmms"."{table}" (\n' + ",\n".join(definitions) + "\n);"
+        for table, definitions in tables.items()
+    ]
+    indexes = db().fetch_all(
+        "SELECT indexdef FROM pg_indexes WHERE schemaname = 'hrmms' ORDER BY tablename, indexname"
+    )
+    ddl.extend(row["indexdef"] for row in indexes)
+    triggers = db().fetch_all(
+        """
+        SELECT pg_get_triggerdef(g.oid, true) AS definition
+        FROM pg_trigger g
+        JOIN pg_class t ON t.oid = g.tgrelid
+        JOIN pg_namespace n ON n.oid = t.relnamespace
+        WHERE n.nspname = 'hrmms' AND NOT g.tgisinternal
+        ORDER BY t.relname, g.tgname
+        """
+    )
+    ddl.extend(row["definition"] + ";" for row in triggers)
+    return "\n\n".join(ddl) or "No schema objects found in hrmms."
 
 
 # ==================================================================
 # Routing
 # ==================================================================
 PAGES = {
-    "📋 Student Portal": page_student,
-    "🛠️ Warden / Admin Dashboard": page_admin,
-    "🛏️ Room Occupancy & Allocations": page_rooms,
-    "👷 Staff Analytics & Workload": page_staff,
-    "🗄️ PostgreSQL Console": page_console,
+    "Student Portal": page_student,
+    "Warden Dashboard": page_admin,
+    "Room Occupancy & Allocations": page_rooms,
+    "Staff Analytics & Workload": page_staff,
+    "PostgreSQL Console": page_console,
 }
 
-PAGES[page]()
+if page not in allowed_pages or page not in PAGES:
+    st.error("Your account is not allowed to open this page.")
+else:
+    PAGES[page]()

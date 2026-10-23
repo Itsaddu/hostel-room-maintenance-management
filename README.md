@@ -18,7 +18,7 @@ The project provides a Streamlit web UI that can use SQLite by default or connec
 8. [Analytical SQL Queries](#-analytical-sql-queries)
 9. [Component Breakdown](#-component-breakdown)
 10. [Underlying Engine Logic](#-underlying-engine-logic)
-11. [UI Walkthrough (5 Streamlit Tabs)](#-ui-walkthrough-5-streamlit-tabs)
+11. [UI Walkthrough (Role-Based Pages)](#-ui-walkthrough-role-based-pages)
 12. [Diagrams](#-diagrams)
     - [ER Diagram](#er-diagram)
     - [Class Diagram](#class-diagram)
@@ -33,7 +33,7 @@ The project provides a Streamlit web UI that can use SQLite by default or connec
 ## ✨ Features
 
 ### Database Layer
-- **4 relational tables** — `ROOM`, `STUDENT`, `MAINTENANCE_STAFF`, `COMPLAINT` with primary keys, foreign keys, `CHECK` constraints, and `UNIQUE` constraints.
+- **5 relational tables** — `ROOM`, `STUDENT`, `MAINTENANCE_STAFF`, `COMPLAINT`, and `LOGIN_USER` with primary keys, foreign keys, `CHECK` constraints, and `UNIQUE` constraints.
 - **5 active database triggers** that enforce business rules automatically:
   1. 🔄 Auto-sync room occupancy on student allocate / vacate
   2. 🚫 Capacity enforcement (no over-allocation)
@@ -44,7 +44,8 @@ The project provides a Streamlit web UI that can use SQLite by default or connec
 - **Indexes** on frequently-queried columns for performance.
 
 ### Application Layer
-- **Streamlit Web UI** with sidebar navigation + 5 functional tabs.
+- **Streamlit Web UI** with a unified sign-in screen and role-restricted navigation.
+- **Role-based access** for students, wardens, and administrators. Passwords are stored as salted PBKDF2 hashes.
 - **Live KPI dashboard** — occupancy %, pending complaints, available staff, etc.
 - **Interactive SQL console** with preset analytical queries and an execution log.
 - **Constraint verification battery** — run all 5 rule checks with one click.
@@ -68,7 +69,9 @@ The project provides a Streamlit web UI that can use SQLite by default or connec
 Project_1/
 ├── schema.sql          # PostgreSQL DDL + triggers + seed data + analytical queries
 ├── db_engine.py        # SQLite/PostgreSQL database layer + triggers + execution log
-├── app.py              # Streamlit web UI (5 tabs)
+├── app.py              # Role-based Streamlit web UI
+├── migrations/         # Repeatable SQL data migrations
+│   └── 001_update_student_name.sql
 ├── requirements.txt    # Python dependencies
 └── README.md           # This file
 ```
@@ -104,6 +107,20 @@ nano .env
 
 Set `HRMMS_DB_BACKEND=postgres`, then fill in `HRMMS_DB_HOST`, `HRMMS_DB_PORT`, `HRMMS_DB_NAME`, `HRMMS_DB_USER`, and `HRMMS_DB_PASSWORD`. The app creates its tables and triggers in a separate `hrmms` schema and seeds demo data when rows are absent. It does not run the destructive `DROP TABLE` statements in `schema.sql` against your `public` schema.
 
+### Authentication and access
+
+The app creates a `LOGIN_USER` table on startup. Passwords are stored as salted PBKDF2 hashes. There is no sign-up or password-reset flow.
+
+| Role | Default username | Default password | Available pages |
+|---|---|---|---|
+| Admin | `admin@123` | `admin@123` | Warden Dashboard, Room Occupancy, Staff Analytics, PostgreSQL Console |
+| Warden | `Warden001` | `Warden001` | Warden Dashboard |
+| Student | Their `Roll_No` | Their `Roll_No` | Student Portal for that student record |
+
+The demo credentials are seeded only when missing. Change the defaults before exposing a deployment beyond a trusted local environment. Admin accounts cannot open the Student Portal. The app links each student login directly to its student record, so a student cannot enter another roll number.
+
+On startup, the app applies the same repeatable update recorded in `migrations/001_update_student_name.sql`, setting `AM.EN.U4CSE23001` to `Adwaith`.
+
 ### 4. (Optional) PostgreSQL Setup
 
 If you want to run the production schema against a real PostgreSQL server:
@@ -122,7 +139,7 @@ psql -d hrmms -f schema.sql
 
 Run commands from this directory. The database files are stored alongside the application, regardless of the current working directory.
 
-### Streamlit Web App (Recommended — 5 full tabs)
+### Streamlit Web App
 
 ```bash
 ./run_linux.sh
@@ -454,35 +471,35 @@ Current_Occupancy is always consistent — no application code needed
 
 ---
 
-## 🖥️ UI Walkthrough (5 Streamlit Tabs)
+## 🖥️ UI Walkthrough (Role-Based Pages)
 
-### Tab 1 — Student Portal
-- Enter roll number → profile card (name, gender, room, email).
+### Student Portal (Student role)
+- Profile card is bound to the authenticated student's roll number (name, gender, room, email).
 - Complaint form: category dropdown, priority, description.
 - Submit → row inserted (status `Pending`).
 - Complaint history table with colored status pills.
 
-### Tab 2 — Warden / Admin Dashboard
+### Warden Dashboard (Warden and Admin roles)
 - KPI cards: total / pending / in-progress / resolved.
 - Filters by status and category.
 - Action panel for a selected complaint:
-  - Specialization-aware staff assignment (shows ✅ match or ⚠️ no-match warning).
+  - Specialization-aware staff assignment with a matching or no-match message.
   - 1-click buttons: **In Progress**, **Resolve**, **Reopen**.
 
-### Tab 3 — Room Occupancy & Allocations
+### Room Occupancy & Allocations (Admin role)
 - KPIs: total rooms, beds, available beds, occupancy %.
 - Allocate / Vacate modal (enforces gender + capacity at DB level).
 - Floor-by-floor block grid: each room card shows occupancy bar + "N free" badge.
-  - 🟢 Green = vacant, 🟡 Yellow = partial, 🔴 Red = full.
+  - Accent borders distinguish vacant, partially occupied, and full rooms.
 - Expandable full room table.
 
-### Tab 4 — Staff Analytics & Workload
+### Staff Analytics & Workload (Admin role)
 - Per-staff cards: name, specialization badge, total/active/resolved task counts, availability toggle.
 - Bar chart of active vs resolved tasks per technician.
 
-### Tab 5 — PostgreSQL Console
+### PostgreSQL Console (Admin role)
 - **SQL Terminal**: free-form query editor + preset queries (Q1–Q5). Returns DataFrames for SELECT.
-- **DDL Schema**: displays the full PostgreSQL `schema.sql` plus the live SQLite engine schema.
+- **DDL Schema**: displays the project PostgreSQL schema plus live table, index, and trigger definitions from the configured database backend.
 - **Constraint Log**: one-click battery that runs all 5 rule checks and shows PASS/FAIL.
 - **Execution Log**: last 50 operations with timestamp, status, and error messages.
 
@@ -573,7 +590,7 @@ classDiagram
 ```mermaid
 graph TB
     subgraph "Presentation Layer"
-        A[Streamlit Web UI<br/>app.py — 5 tabs]
+        A[Streamlit Web UI<br/>app.py — role-based pages]
     end
 
     subgraph "Engine Layer"

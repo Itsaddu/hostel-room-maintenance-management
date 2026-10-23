@@ -9,6 +9,7 @@
 -- ==========================================================
 
 DROP TABLE IF EXISTS COMPLAINT CASCADE;
+DROP TABLE IF EXISTS LOGIN_USER CASCADE;
 DROP TABLE IF EXISTS MAINTENANCE_STAFF CASCADE;
 DROP TABLE IF EXISTS STUDENT CASCADE;
 DROP TABLE IF EXISTS ROOM CASCADE;
@@ -38,6 +39,18 @@ CREATE TABLE STUDENT (
     Block    VARCHAR(10),
     CONSTRAINT FK_Student_Room FOREIGN KEY (Room_No, Block)
         REFERENCES ROOM(Room_No, Block) ON DELETE SET NULL
+);
+
+-- LOGIN_USER stores salted password hashes and role-based access metadata.
+-- Default account hashes are provisioned by db_engine.py during app startup.
+CREATE TABLE LOGIN_USER (
+    Username        VARCHAR(60) PRIMARY KEY,
+    Password_Salt   VARCHAR(32) NOT NULL,
+    Password_Hash   VARCHAR(64) NOT NULL,
+    Role            VARCHAR(10) NOT NULL CHECK (Role IN ('Student','Warden','Admin')),
+    Student_Roll_No VARCHAR(20) UNIQUE,
+    CONSTRAINT FK_Login_Student FOREIGN KEY (Student_Roll_No)
+        REFERENCES STUDENT(Roll_No) ON DELETE CASCADE
 );
 
 -- MAINTENANCE STAFF TABLE
@@ -219,6 +232,11 @@ INSERT INTO STUDENT (Roll_No, Name, Gender, Phone, Email, Room_No, Block) VALUES
 ('AM.EN.U4CSE23003', 'Kiran Das',     'Male',   '9876543212', 'kiran@example.com',  '101', 'A'),
 ('AM.EN.U4CSE23004', 'Rahul Menon',   'Male',   '9876543213', 'rahul@example.com',  '102', 'A'),
 ('AM.EN.U4CSE23005', 'Ananya Iyer',   'Female', '9876543214', 'ananya@example.com', '102', 'C');
+
+-- Requested data migration; safe to re-run.
+UPDATE STUDENT
+SET Name = 'Adwaith'
+WHERE Roll_No = 'AM.EN.U4CSE23001'
 
 INSERT INTO MAINTENANCE_STAFF (Staff_Name, Specialization, Contact_No) VALUES
 ('Ramesh Kumar', 'Plumbing',   '9811122233'),
