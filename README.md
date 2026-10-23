@@ -2,7 +2,7 @@
 
 A full-stack, submission-ready DBMS project that manages **hostel room allocations** and **maintenance complaints** with automated business rules enforced at the database layer.
 
-The project ships with **two front-ends** (Streamlit web UI and a Tkinter desktop GUI). Streamlit can use SQLite by default or connect to PostgreSQL; Tkinter continues to use SQLite. The reference `schema.sql` contains PostgreSQL DDL and triggers.
+The project provides a Streamlit web UI that can use SQLite by default or connect to PostgreSQL. The reference `schema.sql` contains PostgreSQL DDL and triggers.
 
 ---
 
@@ -45,7 +45,6 @@ The project ships with **two front-ends** (Streamlit web UI and a Tkinter deskto
 
 ### Application Layer
 - **Streamlit Web UI** with sidebar navigation + 5 functional tabs.
-- **Tkinter Desktop GUI** with 3 tabs (runs without a browser).
 - **Live KPI dashboard** — occupancy %, pending complaints, available staff, etc.
 - **Interactive SQL console** with preset analytical queries and an execution log.
 - **Constraint verification battery** — run all 5 rule checks with one click.
@@ -56,8 +55,7 @@ The project ships with **two front-ends** (Streamlit web UI and a Tkinter deskto
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend (Web) | Streamlit 1.65+, Pandas |
-| Frontend (Desktop) | Tkinter (stdlib) |
+| Frontend | Streamlit 1.65+, Pandas |
 | Database Engine | SQLite (default) or PostgreSQL (Streamlit) |
 | PostgreSQL Adapter | Psycopg 3 |
 | Language | Python 3.10+ |
@@ -71,12 +69,11 @@ Project_1/
 ├── schema.sql          # PostgreSQL DDL + triggers + seed data + analytical queries
 ├── db_engine.py        # SQLite/PostgreSQL database layer + triggers + execution log
 ├── app.py              # Streamlit web UI (5 tabs)
-├── tkinter_app.py      # Tkinter desktop GUI (3 tabs)
 ├── requirements.txt    # Python dependencies
 └── README.md           # This file
 ```
 
-> At runtime the engine creates `hrmms_streamlit.db` (SQLite) and the Tkinter app creates `hostel_management.db`.
+> In SQLite mode, the app stores its data in `hrmms_streamlit.db` alongside the project.
 
 ---
 
@@ -84,7 +81,7 @@ Project_1/
 
 ### 1. Prerequisites
 - Linux with Python **3.10 or higher**
-- Ubuntu/Debian packages: `sudo apt update && sudo apt install python3.14-venv python3-tk` (replace `python3.14-venv` with the package matching your Python version if needed)
+- Ubuntu/Debian: install the `python3-venv` package matching your Python version if virtual environment support is missing.
 
 ### 2. Install Dependencies
 
@@ -105,7 +102,7 @@ cp .env.example .env
 nano .env
 ```
 
-Set `HRMMS_DB_BACKEND=postgres`, then fill in `HRMMS_DB_HOST`, `HRMMS_DB_PORT`, `HRMMS_DB_NAME`, `HRMMS_DB_USER`, and `HRMMS_DB_PASSWORD`. The app creates its tables and triggers in a separate `hrmms` schema and seeds demo data when rows are absent. It does not run the destructive `DROP TABLE` statements in `schema.sql` against your `public` schema. The Tkinter desktop app continues to use its own SQLite database.
+Set `HRMMS_DB_BACKEND=postgres`, then fill in `HRMMS_DB_HOST`, `HRMMS_DB_PORT`, `HRMMS_DB_NAME`, `HRMMS_DB_USER`, and `HRMMS_DB_PASSWORD`. The app creates its tables and triggers in a separate `hrmms` schema and seeds demo data when rows are absent. It does not run the destructive `DROP TABLE` statements in `schema.sql` against your `public` schema.
 
 ### 4. (Optional) PostgreSQL Setup
 
@@ -132,12 +129,6 @@ Run commands from this directory. The database files are stored alongside the ap
 ```
 
 Opens at **http://localhost:8501**
-
-### Tkinter Desktop App (3 tabs)
-
-```bash
-python3 tkinter_app.py
-```
 
 ### Just Test the Engine
 
@@ -401,11 +392,6 @@ ORDER BY Block;
 - 5 page functions: `page_student()`, `page_admin()`, `page_rooms()`, `page_staff()`, `page_console()`.
 - Status badges and specialization badges rendered via inline HTML/CSS.
 
-### `tkinter_app.py` — Desktop GUI
-
-- 3 `ttk.Notebook` tabs.
-- Emulates the same triggers in Python (`recalc_occupancy`, specialization/gender checks before insert/update).
-
 ### `schema.sql` — PostgreSQL Reference
 
 - Drop-in schema for a real PostgreSQL instance (plpgsql triggers).
@@ -579,18 +565,7 @@ classDiagram
         +spec_badge(spec) str
     }
 
-    class TkinterApp {
-        +init_db() None
-        +submit_complaint() None
-        +assign_staff() None
-        +allocate_student() None
-        +vacate_student() None
-        +refresh_all() None
-        +recalc_occupancy(conn, room, block) None
-    }
-
     HostelDB <.. App : uses
-    HostelDB <.. TkinterApp : (own SQLite impl)
 ```
 
 ### System Architecture
@@ -599,7 +574,6 @@ classDiagram
 graph TB
     subgraph "Presentation Layer"
         A[Streamlit Web UI<br/>app.py — 5 tabs]
-        B[Tkinter Desktop GUI<br/>tkinter_app.py — 3 tabs]
     end
 
     subgraph "Engine Layer"
@@ -620,7 +594,6 @@ graph TB
     end
 
     A --> C
-    B --> C
     C --> D
     C --> E
     C --> F
@@ -695,7 +668,7 @@ Expected result: **5/5 PASS**.
 | **4. Conceptual Model** | ER Diagram (above) — Room ↔ Student (1:N), Staff ↔ Complaint (1:N), Student ↔ Complaint (1:N) |
 | **5. Relational Schema & BCNF** | 4 tables, FDs, all determinants are superkeys → BCNF |
 | **6. SQL Implementation** | `schema.sql` DDL + 5 triggers + 5 analytical queries |
-| **7. UI & System Integration** | Screenshots of Streamlit 5 tabs + Tkinter 3 tabs |
+| **7. UI & System Integration** | Screenshots of the Streamlit 5-tab interface |
 | **8. Testing & Verification** | Constraint verification table (above) |
 
 ---
