@@ -236,7 +236,7 @@ INSERT INTO STUDENT (Roll_No, Name, Gender, Phone, Email, Room_No, Block) VALUES
 -- Requested data migration; safe to re-run.
 UPDATE STUDENT
 SET Name = 'Adwaith'
-WHERE Roll_No = 'AM.EN.U4CSE23001'
+WHERE Roll_No = 'AM.EN.U4CSE23001';
 
 INSERT INTO MAINTENANCE_STAFF (Staff_Name, Specialization, Contact_No) VALUES
 ('Ramesh Kumar', 'Plumbing',   '9811122233'),
