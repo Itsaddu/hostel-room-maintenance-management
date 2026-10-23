@@ -119,7 +119,7 @@ The app creates a `LOGIN_USER` table on startup. Passwords are stored as salted 
 
 The demo credentials are seeded only when missing. Change the defaults before exposing a deployment beyond a trusted local environment. Admin accounts cannot open the Student Portal. The app links each student login directly to its student record, so a student cannot enter another roll number.
 
-On startup, the app applies the same repeatable update recorded in `migrations/001_update_student_name.sql`, setting `AM.EN.U4CSE23001` to `Adwaith`.
+On startup, the app applies the same repeatable update recorded in `migrations/001_update_student_name.sql`, setting `AM.EN.U4CSE23001` to `Adwaith` with email `adwaithjs2003@gmail.com`.
 
 ### 4. (Optional) PostgreSQL Setup
 

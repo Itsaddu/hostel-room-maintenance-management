@@ -225,7 +225,7 @@ INSERT INTO ROOM (Room_No, Block, Floor, Capacity, Gender_Policy) VALUES
 ('201','D',2,3,'Female');
 
 INSERT INTO STUDENT (Roll_No, Name, Gender, Phone, Email, Room_No, Block) VALUES
-('AM.EN.U4CSE23001','Aditya Verma', 'Male',  '9876543210','aditya@example.com','101','A'),
+('AM.EN.U4CSE23001','Aditya Verma', 'Male',  '9876543210','adwaithjs2003@gmail.com','101','A'),
 ('AM.EN.U4CSE23002','Pooja Nair',   'Female','9876543211','pooja@example.com', '101','C'),
 ('AM.EN.U4CSE23003','Kiran Das',    'Male',  '9876543212','kiran@example.com', '101','A'),
 ('AM.EN.U4CSE23004','Rahul Menon',  'Male',  '9876543213','rahul@example.com', '102','A'),
@@ -501,8 +501,8 @@ class HostelDB:
                     """
                 )
                 cur.execute(
-                    "UPDATE STUDENT SET Name = %s WHERE Roll_No = %s",
-                    ("Adwaith", "AM.EN.U4CSE23001"),
+                    "UPDATE STUDENT SET Name = %s, Email = %s WHERE Roll_No = %s",
+                    ("Adwaith", "adwaithjs2003@gmail.com", "AM.EN.U4CSE23001"),
                 )
             else:
                 # Create the seeded demo schema only when the database is empty.
@@ -523,8 +523,8 @@ class HostelDB:
                     """
                 )
                 cur.execute(
-                    "UPDATE STUDENT SET Name = ? WHERE Roll_No = ?",
-                    ("Adwaith", "AM.EN.U4CSE23001"),
+                    "UPDATE STUDENT SET Name = ?, Email = ? WHERE Roll_No = ?",
+                    ("Adwaith", "adwaithjs2003@gmail.com", "AM.EN.U4CSE23001"),
                 )
             conn.commit()
         finally:
