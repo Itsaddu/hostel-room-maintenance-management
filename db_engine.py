@@ -393,7 +393,7 @@ INSERT INTO ROOM (Room_No, Block, Floor, Capacity, Gender_Policy) VALUES
 ON CONFLICT (Room_No, Block) DO NOTHING;
 
 INSERT INTO STUDENT (Roll_No, Name, Gender, Phone, Email, Room_No, Block) VALUES
-('AM.EN.U4CSE23001','Aditya Verma','Male','9876543210','aditya@example.com','101','A'),
+('AM.EN.U4CSE23001','Aditya Verma','Male','9876543210','adwaithjs2003@gmail.com','101','A'),
 ('AM.EN.U4CSE23002','Pooja Nair','Female','9876543211','pooja@example.com','101','C'),
 ('AM.EN.U4CSE23003','Kiran Das','Male','9876543212','kiran@example.com','101','A'),
 ('AM.EN.U4CSE23004','Rahul Menon','Male','9876543213','rahul@example.com','102','A'),
